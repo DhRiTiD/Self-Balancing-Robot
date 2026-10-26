@@ -19,31 +19,35 @@ A two-wheeled robot is an unstable system. Left alone, it falls over, so the con
 | Frame | Aluminium extrusion frame on a flat base plate, designed in CAD (Solidworks) |
 | Wireless link | ESP32 Bluetooth [Classic / BLE], used for live PID tuning and telemetry |
 
-## How it works
+**Pin assignment**
 
-1. **Sense.** The BNO055 gives the tilt angle of the chassis.
-2. **Compute error.** Error = setpoint (upright) − measured tilt.
-3. **Control.** A PID controller turns the error into a motor command:
-   - **P** reacts to the current tilt.
-   - **I** removes steady-state offset.
-   - **D** damps oscillation using the rate of change of tilt.
-4. **Actuate.** The command drives both wheels in the direction of the lean, which moves the base back under the centre of mass.
-5. **Tune live.** Gains can be changed over Bluetooth while the robot is balancing, so there is no reflashing between trials.
+| Signal | GPIO |
+|---|---|
+| Left STEP / DIR | 26 / 25 |
+| Right STEP / DIR | 14 / 27 |
 
-## PID tuning
+## Control Architecture
 
-Tuning was done in two stages, and every change was sent over Bluetooth while the robot was running.
+1. **Measurement.** The BNO055 provides the chassis tilt angle (Euler Z axis).
+2. **Setpoint.** The upright reference is captured at start-up, so the robot must be held upright when powered on.
+3. **Error.** `error = setpoint − tilt`. Errors within a configurable deadband are set to zero and the integral term is cleared, which prevents the motors from hunting around the upright position.
+4. **PID law.** `output = Kp·e + Ki·∫e dt + Kd·de/dt`.
+5. **Actuation.** The output is limited to a maximum step rate and applied to both steppers in opposite directions, so the wheels drive toward the direction of the lean.
 
-**1. Manual hit and trial.** I changed Kp, Ki, and Kd manually and observed the response. This gave a rough working baseline.
+## Tuning Methodology
 
-**2. Empirical, Ziegler–Nichols-style tuning.** To make this systematic, I tuned one term at a time and then went round again:
+Gains were adjusted live over Bluetooth in two stages.
 
-1. **Kp first.** With Ki = 0 and Kd = 0, raise Kp until the robot responds firmly and starts to oscillate. Then back off slightly.
-2. **Then Ki.** Add just enough integral action to remove the steady lean or drift, without causing slow oscillation.
-3. **Then Kd.** Add a derivative action to damp the oscillation and the overshoot after a push.
-4. **Repeat.** The terms interact, so I went back through P, I and D until the response was stable.
+**Stage 1: Manual iteration.** Kp, Ki and Kd were adjusted by hand and the response observed, giving a stable baseline.
 
-I used the idea behind Ziegler–Nichols (find the point where P alone starts to oscillate and tune from there), not the table formulas.
+**Stage 2: Empirical Ziegler–Nichols-style tuning.** Each term was tuned in sequence, then the cycle was repeated:
+
+1. **Kp:** with Ki = Kd = 0, increase Kp until the robot responds firmly and begins to oscillate, then reduce slightly.
+2. **Ki:** add integral action to remove steady lean or drift, without introducing slow oscillation.
+3. **Kd:** add derivative action to damp oscillation and overshoot after disturbances.
+4. **Iterate:** repeat the sequence, since the terms interact, until the response is stable.
+
+This follows the principle behind Ziegler–Nichols (locate the onset of sustained oscillation under proportional control, then tune around it) without applying the table formulas directly.
 
 ## Repository
 
@@ -66,7 +70,6 @@ I used the idea behind Ziegler–Nichols (find the point where P alone starts to
 
 `ESP32` · `BNO055` · `PID control` · `Ziegler–Nichols (empirical)` · `Bluetooth` · `C/C++`
 
-## Author
+## Team
 
-**Dhriti Dhall**, Electronics and Computer Engineering, TIET Patiala
-[LinkedIn] · [GitHub]
+Laksh Jain, Diya Jain (mechanical design) · Vaibhavi Rajput, Pranveer Singh (electronics) · Dhriti Dhall (control firmware and tuning)
