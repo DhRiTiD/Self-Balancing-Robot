@@ -6,6 +6,8 @@ A two-wheeled inverted-pendulum robot that keeps itself upright using a closed-l
 
 A two-wheeled robot is an unstable system. Left alone, it falls over, so the controller has to keep correcting the tilt. The project covers the full control loop: sensing, control and actuation. It was also my first hands-on look at how much tuning matters for a real plant.
 
+![Self-balancing](Self_Balancing.png)
+
 ## Hardware
 
 | Component | Details |
